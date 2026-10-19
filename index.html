@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>検地体験！歩から石高・おにぎり計算Webアプリ</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Japanese styles) -->
+    <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Zen Maru Gothic', sans-serif;
+            background-color: #f7f3e9;
+            background-image: radial-gradient(#e5decf 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: #2c2523;
+        }
+
+        .font-mincho {
+            font-family: 'Shippori Mincho', serif;
+        }
+
+        .washi-card {
+            background: #fffdfa;
+            border: 2px solid #d4c5a9;
+            box-shadow: 0 4px 12px rgba(80, 60, 40, 0.08), inset 0 0 20px rgba(235, 225, 205, 0.3);
+            border-radius: 16px;
+        }
+
+        .washi-card-dark {
+            background: #362e2b;
+            color: #f7f3e9;
+            border: 2px solid #574a45;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+        }
+
+        .wood-btn {
+            background: linear-gradient(135deg, #8c532b, #5c3519);
+            color: #fff;
+            border: 2px solid #3d210f;
+            box-shadow: 0 4px 0 #3d210f;
+            transition: all 0.1s ease;
+        }
+
+        .wood-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 0 #3d210f;
+        }
+
+        .wood-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #3d210f;
+        }
+
+        /* Rice Animation */
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-6px) rotate(3deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1e9d2;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #bfa87a;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12 flex flex-col justify-between">
+
+    <header class="w-full bg-amber-900 text-amber-50 py-6 px-4 shadow-md border-b-4 border-amber-950 relative overflow-hidden">
+        <div class="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 relative z-10">
+            <div class="flex items-center gap-3">
+                <div class="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center text-amber-900 text-3xl font-bold border-2 border-amber-600 shadow-inner">
+                    🌾
+                </div>
+                <div>
+                    <span class="text-xs bg-amber-700 text-amber-200 px-2.5 py-0.5 rounded-full font-bold tracking-widest uppercase">歴史体験学習Webアプリ</span>
+                    <h1 class="text-2xl md:text-3xl font-extrabold font-mincho tracking-wider">令和の太閤検地帳</h1>
+                </div>
+            </div>
+            <div class="text-right text-xs md:text-sm bg-amber-950/50 p-2.5 rounded-lg border border-amber-800/60">
+                <p>1反 ＝ <span class="text-amber-300 font-bold">300歩（ぶ）</span></p>
+                <p>1石 ＝ 大人が<span class="text-amber-300 font-bold">1年間で食べるお米の量</span></p>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto w-full px-4 mt-6 grid grid-cols-1 md:grid-cols-12 gap-6 flex-grow">
+        
+        <!-- Left Column: Inputs (7 cols) -->
+        <section class="md:col-span-7 space-y-6">
+            
+            <!-- Step 1: Area Input (Bu) -->
+            <div class="washi-card p-5 md:p-6 relative">
+                <div class="flex items-center justify-between mb-4 pb-2 border-b-2 border-amber-200">
+                    <h2 class="text-xl font-bold font-mincho flex items-center gap-2 text-amber-950">
+                        <span class="bg-amber-800 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-sans">1</span>
+                        田んぼの広さ（歩）を入力
+                    </h2>
+                    <button id="toggle-calc-btn" onclick="toggleCalcAssist()" class="text-xs text-amber-800 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg border border-amber-300 font-bold flex items-center gap-1 transition">
+                        <i class="fa-solid fa-calculator"></i> 縦×横から計算
+                    </button>
+                </div>
+
+                <!-- Calc Assist Box (Hidden by default) -->
+                <div id="calc-assist-box" class="hidden mb-4 p-4 bg-amber-50 border border-amber-300 rounded-xl">
+                    <p class="text-xs text-amber-900 font-bold mb-2">💡 縦と横の長さ（間：けん）を入力すると歩数が分かります</p>
+                    <div class="grid grid-cols-2 gap-3 mb-2">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">たて（間）</label>
+                            <input type="number" id="length-ken" min="1" placeholder="例: 10" class="w-full p-2 border rounded-lg text-center font-bold text-lg bg-white focus:ring-2 focus:ring-amber-500 outline-none" oninput="calculateBuFromKen()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">よこ（間）</label>
+                            <input type="number" id="width-ken" min="1" placeholder="例: 30" class="w-full p-2 border rounded-lg text-center font-bold text-lg bg-white focus:ring-2 focus:ring-amber-500 outline-none" oninput="calculateBuFromKen()">
+                        </div>
+                    </div>
+                    <p class="text-right text-xs text-amber-800">1間 × 1間 ＝ 1歩（ぶ）</p>
+                </div>
+
+                <!-- Main Bu Input -->
+                <div>
+                    <label for="bu-input" class="block text-sm font-bold text-amber-900 mb-2">
+                        田んぼの面積： <span class="text-xs text-amber-700">（算出された歩数を入れてね）</span>
+                    </label>
+                    <div class="relative flex items-center">
+                        <input type="number" id="bu-input" min="1" value="300" class="w-full p-3.5 text-2xl font-black text-amber-950 bg-amber-50/50 border-2 border-amber-300 rounded-xl focus:ring-2 focus:ring-amber-600 focus:bg-white outline-none shadow-inner pr-12" placeholder="例: 300" oninput="calculateAll()">
+                        <span class="absolute right-4 font-bold text-lg text-amber-800">歩</span>
+                    </div>
+                    <!-- Quick Presets -->
+                    <div class="flex items-center gap-2 mt-3 text-xs flex-wrap">
+                        <span class="text-gray-500 font-bold">よく使う広さ:</span>
+                        <button onclick="setBuPreset(150)" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-md font-bold transition">150歩 (0.5反)</button>
+                        <button onclick="setBuPreset(300)" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-md font-bold transition">300歩 (1反)</button>
+                        <button onclick="setBuPreset(600)" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-md font-bold transition">600歩 (2反)</button>
+                        <button onclick="setBuPreset(3000)" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-md font-bold transition">3000歩 (1町)</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Quality Grade Selection -->
+            <div class="washi-card p-5 md:p-6">
+                <div class="flex items-center justify-between mb-4 pb-2 border-b-2 border-amber-200">
+                    <h2 class="text-xl font-bold font-mincho flex items-center gap-2 text-amber-950">
+                        <span class="bg-amber-800 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-sans">2</span>
+                        田んぼの等級（上田・中田・下田）を選ぶ
+                    </h2>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <!-- Jo-den -->
+                    <button type="button" id="grade-joden" onclick="selectGrade('joden')" class="grade-btn border-2 border-amber-300 bg-amber-50/80 hover:bg-amber-100 p-3.5 rounded-xl text-center flex flex-col items-center justify-between transition relative overflow-hidden group">
+                        <span class="text-xs font-bold text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded mb-1">とびきり良い</span>
+                        <span class="text-xl font-black font-mincho text-amber-950 my-1">上田</span>
+                        <span class="text-xs font-bold text-amber-700">1.5倍</span>
+                        <span class="text-[10px] text-gray-500 mt-1">(1.5石 / 反)</span>
+                    </button>
+
+                    <!-- Chu-den -->
+                    <button type="button" id="grade-chuden" onclick="selectGrade('chuden')" class="grade-btn border-2 border-amber-600 bg-amber-600 text-white p-3.5 rounded-xl text-center flex flex-col items-center justify-between transition relative overflow-hidden shadow-md">
+                        <span class="text-xs font-bold text-amber-100 bg-amber-800/80 px-2 py-0.5 rounded mb-1">標準・ふつう</span>
+                        <span class="text-xl font-black font-mincho my-1">中田</span>
+                        <span class="text-xs font-bold text-amber-200">1.0倍</span>
+                        <span class="text-[10px] text-amber-100 mt-1">(1.0石 / 反)</span>
+                    </button>
+
+                    <!-- Ge-den -->
+                    <button type="button" id="grade-geden" onclick="selectGrade('geden')" class="grade-btn border-2 border-amber-300 bg-amber-50/80 hover:bg-amber-100 p-3.5 rounded-xl text-center flex flex-col items-center justify-between transition relative overflow-hidden group">
+                        <span class="text-xs font-bold text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded mb-1">あまりとれない</span>
+                        <span class="text-xl font-black font-mincho text-amber-950 my-1">下田</span>
+                        <span class="text-xs font-bold text-amber-700">0.5倍</span>
+                        <span class="text-[10px] text-gray-500 mt-1">(0.5石 / 反)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Calculation Steps Breakdown -->
+            <div class="washi-card p-5 bg-amber-900/5 border-amber-300">
+                <h3 class="text-sm font-bold text-amber-950 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-square-root-variable text-amber-700"></i> 計算の手順（計算式）
+                </h3>
+
+                <div class="space-y-3 text-sm">
+                    <!-- Step A -->
+                    <div class="bg-white p-3 rounded-lg border border-amber-200 flex items-center justify-between shadow-sm">
+                        <span class="font-bold text-gray-700">① 歩（ぶ）を 反（たん）に変える</span>
+                        <div class="text-right">
+                            <span id="step1-bu" class="font-bold text-amber-900">300</span> 歩 ÷ 300 ＝ 
+                            <span id="step1-tan" class="font-extrabold text-amber-700 text-lg">1.00</span> 反
+                        </div>
+                    </div>
+
+                    <!-- Step B -->
+                    <div class="bg-white p-3 rounded-lg border border-amber-200 flex items-center justify-between shadow-sm">
+                        <span class="font-bold text-gray-700">② 反に田んぼの倍率をかける</span>
+                        <div class="text-right">
+                            <span id="step2-tan" class="font-bold text-amber-900">1.00</span> 反 × 
+                            <span id="step2-rate" class="font-bold text-amber-900">1.0</span> ＝ 
+                            <span id="step2-koku" class="font-extrabold text-amber-700 text-lg">1.00</span> 石
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add to Register Button -->
+            <button onclick="addRecordToKenchicho()" class="wood-btn w-full py-3.5 px-4 rounded-xl font-extrabold text-lg flex items-center justify-center gap-2 shadow-lg">
+                <i class="fa-solid fa-scroll text-amber-300"></i> この計算を「検地帳」に記帳する
+            </button>
+
+        </section>
+
+        <!-- Right Column: Results & Visualization (5 cols) -->
+        <section class="md:col-span-5 space-y-6">
+            
+            <!-- Result Primary Display -->
+            <div class="washi-card-dark p-6 text-center relative overflow-hidden border-2 border-amber-700">
+                <div class="absolute -right-8 -bottom-8 opacity-10 text-9xl font-mincho select-none">石</div>
+                
+                <span class="text-xs bg-amber-800/80 text-amber-200 px-3 py-1 rounded-full font-bold tracking-widest inline-block mb-2">検地 算出結果</span>
+                
+                <p class="text-amber-200/80 text-xs mt-1">この田んぼからとれるお米の収穫量（石高）</p>
+                
+                <!-- Big Koku Number -->
+                <div class="my-4">
+                    <span id="result-koku-main" class="text-5xl md:text-6xl font-black font-mincho text-amber-300 tracking-tight">1.00</span>
+                    <span class="text-2xl font-bold font-mincho text-amber-100 ml-1">石（こく）</span>
+                </div>
+
+                <!-- Edo Unit Conversion (Koku, To, Sho, Go) -->
+                <div class="bg-black/30 p-3 rounded-xl border border-amber-800/50 text-xs text-amber-200 grid grid-cols-4 gap-1 text-center">
+                    <div>
+                        <div class="text-gray-400">石</div>
+                        <div id="unit-koku" class="font-bold text-sm text-white">1</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-400">斗（と）</div>
+                        <div id="unit-to" class="font-bold text-sm text-white">0</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-400">升（しょう）</div>
+                        <div id="unit-sho" class="font-bold text-sm text-white">0</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-400">合（ごう）</div>
+                        <div id="unit-go" class="font-bold text-sm text-white">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rice and Onigiri Visualization Card -->
+            <div class="washi-card p-5 relative overflow-hidden">
+                <h3 class="text-lg font-bold font-mincho text-amber-950 border-b-2 border-amber-200 pb-2 mb-4 flex items-center gap-2">
+                    <span class="text-2xl">🍙</span> お米・おにぎりに換算すると？
+                </h3>
+
+                <!-- Onigiri Highlight Box -->
+                <div class="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 text-center mb-4 relative">
+                    <div class="animate-float text-4xl mb-1">🍙</div>
+                    <p class="text-xs font-bold text-amber-800 uppercase tracking-wider">作れるおにぎりの数</p>
+                    <div class="my-1">
+                        <span id="onigiri-count" class="text-4xl font-black text-amber-900 font-mincho">3,375</span>
+                        <span class="text-lg font-bold text-amber-800 ml-1">個</span>
+                    </div>
+                    <p class="text-[11px] text-amber-700">（1個のおにぎり ＝ 約100gのご飯）</p>
+                </div>
+
+                <!-- Cooked Rice Weight Box -->
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div class="bg-white p-3 rounded-xl border border-amber-200 text-center">
+                        <p class="text-xs font-bold text-gray-500">炊く前のお米（生米）</p>
+                        <p class="text-lg font-bold text-amber-900 mt-1">
+                            <span id="raw-rice-weight">150</span> <span class="text-xs font-normal">kg</span>
+                        </p>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl border border-amber-200 text-center">
+                        <p class="text-xs font-bold text-gray-500">炊き上がりご飯</p>
+                        <p class="text-lg font-bold text-amber-900 mt-1">
+                            <span id="cooked-rice-weight">337.5</span> <span class="text-xs font-normal">kg</span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Annual Food Capacity -->
+                <div class="bg-amber-900 text-amber-50 p-3 rounded-xl text-xs flex items-center gap-3">
+                    <div class="text-3xl">👨‍👩‍👧‍👦</div>
+                    <div>
+                        <p class="font-bold">大人が1年間生きられる人数</p>
+                        <p class="text-amber-200 mt-0.5">約 <span id="people-count" class="text-amber-300 font-bold text-base">1.0</span> 人分の1年間の主食になります！</p>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Record Ledger Section -->
+    <section class="max-w-4xl mx-auto w-full px-4 mt-8">
+        <div class="washi-card p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b-2 border-amber-200 mb-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">📜</span>
+                    <h2 class="text-xl font-bold font-mincho text-amber-950">検地帳（村の測量記録帳）</h2>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-xs font-bold text-amber-800">村の合計石高: <span id="total-village-koku" class="text-lg font-black text-amber-900 font-mincho">0.00</span> 石</span>
+                    <button onclick="clearKenchicho()" class="text-xs text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg border border-red-200 font-bold transition">
+                        リセット
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-amber-100/70 border-b border-amber-300 text-amber-900 font-bold">
+                            <th class="p-2.5">田んぼ番号</th>
+                            <th class="p-2.5">面積（歩）</th>
+                            <th class="p-2.5">広さ（反）</th>
+                            <th class="p-2.5">等級</th>
+                            <th class="p-2.5 text-right">石高（石）</th>
+                            <th class="p-2.5 text-center">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="kenchicho-tbody" class="divide-y divide-amber-200/60 text-gray-800">
+                        <tr id="empty-row">
+                            <td colspan="6" class="text-center py-6 text-gray-400 text-xs">
+                                まだ検地帳に記録がありません。「記帳する」ボタンを押して追加してね！
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Educational Trivia Banner -->
+    <section class="max-w-4xl mx-auto w-full px-4 mt-6">
+        <div class="bg-amber-200/60 border border-amber-300 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="text-3xl">💡</div>
+                <div>
+                    <h4 class="font-bold text-amber-950 text-sm">【検地の豆知識】太閤検地ってなぁに？</h4>
+                    <p class="text-xs text-amber-900">昔の日本で、豊臣秀吉が全国の田んぼの広さと米の取れ高を統一した物差しで調べ上げたことだよ！</p>
+                </div>
+            </div>
+            <button onclick="toggleKnowledgeModal()" class="text-xs bg-amber-800 text-amber-100 hover:bg-amber-900 px-4 py-2 rounded-lg font-bold whitespace-nowrap transition">
+                もっと詳しく学ぶ
+            </button>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="w-full text-center text-xs text-gray-500 py-6 mt-12 border-t border-amber-200">
+        <p>江戸時代・太閤検地 体験学習アプリ | 小学校社会科・歴史学習用ツール</p>
+    </footer>
+
+    <!-- Knowledge Modal -->
+    <div id="knowledge-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="washi-card max-w-lg w-full p-6 max-h-[85vh] overflow-y-auto relative">
+            <button onclick="toggleKnowledgeModal()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 font-bold text-xl">✕</button>
+            
+            <h3 class="text-xl font-bold font-mincho text-amber-950 mb-4 pb-2 border-b-2 border-amber-200 flex items-center gap-2">
+                <span>🏯</span> 検地（けんち）と石高（こくだか）のひみつ
+            </h3>
+
+            <div class="space-y-4 text-xs md:text-sm text-gray-800 leading-relaxed">
+                <div class="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                    <h4 class="font-bold text-amber-900 mb-1">Q. 「歩（ぶ）」と「反（たん）」ってなに？</h4>
+                    <p>昔の面積の単位だよ。1間（約1.81m）四方の広さを「1歩」と言います。300歩集まると「1反（たん）」になります。</p>
+                </div>
+
+                <div class="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                    <h4 class="font-bold text-amber-900 mb-1">Q. なぜ上田・中田・下田に分けるの？</h4>
+                    <p>同じ広さの田んぼでも、日当たりや水の豊かさによって収穫できる米の量が違ったからだよ。上田はたくさん収穫できるとても良い田んぼです。</p>
+                </div>
+
+                <div class="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                    <h4 class="font-bold text-amber-900 mb-1">Q. 「1石（こく）」ってどれくらい？</h4>
+                    <p>大人が1年間に食べるお米の量（約150kg / 米約1000合分）が1石だよ。昔のお殿様や武士の強さは、自分の土地で何石のお米がとれるか（石高）で表されていたんだ！</p>
+                </div>
+
+                <div class="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                    <h4 class="font-bold text-amber-900 mb-1">Q. 単位の表</h4>
+                    <ul class="list-disc list-inside space-y-1 text-xs">
+                        <li>1町（ちょう） ＝ 10反 ＝ 3,000歩</li>
+                        <li>1反（たん） ＝ 10畝（せ） ＝ 300歩</li>
+                        <li>1石（こく） ＝ 10斗（と） ＝ 100升（しょう） ＝ 1,000合（ごう）</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mt-6 text-center">
+                <button onclick="toggleKnowledgeModal()" class="wood-btn px-6 py-2.5 rounded-xl font-bold text-sm">
+                    とじる
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentGrade = 'chuden'; // 'joden', 'chuden', 'geden'
+        const gradeRates = {
+            'joden': 1.5,
+            'chuden': 1.0,
+            'geden': 0.5
+        };
+
+        let records = [];
+
+        // UI Initialization
+        window.onload = function() {
+            calculateAll();
+        };
+
+        // Select Grade Rate
+        function selectGrade(grade) {
+            currentGrade = grade;
+
+            const btnJoden = document.getElementById('grade-joden');
+            const btnChuden = document.getElementById('grade-chuden');
+            const btnGeden = document.getElementById('grade-geden');
+
+            // Reset Styles
+            [btnJoden, btnChuden, btnGeden].forEach(btn => {
+                btn.className = "grade-btn border-2 border-amber-300 bg-amber-50/80 hover:bg-amber-100 p-3.5 rounded-xl text-center flex flex-col items-center justify-between transition relative overflow-hidden group";
+            });
+
+            // Set Selected Style
+            const selectedBtn = document.getElementById('grade-' + grade);
+            selectedBtn.className = "grade-btn border-2 border-amber-600 bg-amber-600 text-white p-3.5 rounded-xl text-center flex flex-col items-center justify-between transition relative overflow-hidden shadow-md";
+
+            calculateAll();
+        }
+
+        function toggleCalcAssist() {
+            const box = document.getElementById('calc-assist-box');
+            box.classList.toggle('hidden');
+        }
+
+        function calculateBuFromKen() {
+            const length = parseFloat(document.getElementById('length-ken').value) || 0;
+            const width = parseFloat(document.getElementById('width-ken').value) || 0;
+            if (length > 0 && width > 0) {
+                const bu = Math.round(length * width);
+                document.getElementById('bu-input').value = bu;
+                calculateAll();
+            }
+        }
+
+        function setBuPreset(buValue) {
+            document.getElementById('bu-input').value = buValue;
+            calculateAll();
+        }
+
+        function calculateAll() {
+            const buInput = parseFloat(document.getElementById('bu-input').value);
+            
+            if (isNaN(buInput) || buInput <= 0) {
+                updateDisplaysZero();
+                return;
+            }
+
+            // Formula Steps:
+            // 1. Convert Bu to Tan: Tan = Bu / 300
+            const tan = buInput / 300;
+
+            // 2. Apply Field Grade Multiplier: Koku = Tan * Rate
+            const rate = gradeRates[currentGrade];
+            const koku = tan * rate;
+
+            // Update Breakdown Steps UI
+            document.getElementById('step1-bu').innerText = buInput.toLocaleString();
+            document.getElementById('step1-tan').innerText = tan.toFixed(2);
+            document.getElementById('step2-tan').innerText = tan.toFixed(2);
+            document.getElementById('step2-rate').innerText = rate.toFixed(1);
+            document.getElementById('step2-koku').innerText = koku.toFixed(2);
+
+            // Update Main Koku Display
+            document.getElementById('result-koku-main').innerText = koku.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            // Edo Units Breakdown: 1石 = 10斗 = 100升 = 1000合
+            const totalGo = Math.round(koku * 1000);
+            const kokuPart = Math.floor(totalGo / 1000);
+            const remainder1 = totalGo % 1000;
+            const toPart = Math.floor(remainder1 / 100);
+            const remainder2 = remainder1 % 100;
+            const shoPart = Math.floor(remainder2 / 10);
+            const goPart = remainder2 % 10;
+
+            document.getElementById('unit-koku').innerText = kokuPart.toLocaleString();
+            document.getElementById('unit-to').innerText = toPart;
+            document.getElementById('unit-sho').innerText = shoPart;
+            document.getElementById('unit-go').innerText = goPart;
+
+            // Rice Weight & Onigiri Calculations:
+            // 1石 = 150kg raw rice
+            const rawRiceKg = koku * 150;
+            
+            // Raw rice to cooked rice multiplier (~2.25x)
+            const cookedRiceKg = rawRiceKg * 2.25;
+
+            // 1 Onigiri = ~100g (0.1kg cooked rice) -> cookedRiceKg * 10
+            const onigiriCount = Math.round(cookedRiceKg * 10);
+
+            // Annual food capacity: 1 Koku = 1 adult / year
+            const peopleCapacity = koku;
+
+            // Update Rice UI Elements
+            document.getElementById('raw-rice-weight').innerText = rawRiceKg.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+            document.getElementById('cooked-rice-weight').innerText = cookedRiceKg.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+            document.getElementById('onigiri-count').innerText = onigiriCount.toLocaleString();
+            document.getElementById('people-count').innerText = peopleCapacity.toFixed(1);
+        }
+
+        function updateDisplaysZero() {
+            document.getElementById('step1-bu').innerText = '0';
+            document.getElementById('step1-tan').innerText = '0.00';
+            document.getElementById('step2-tan').innerText = '0.00';
+            document.getElementById('step2-rate').innerText = gradeRates[currentGrade].toFixed(1);
+            document.getElementById('step2-koku').innerText = '0.00';
+
+            document.getElementById('result-koku-main').innerText = '0.00';
+            document.getElementById('unit-koku').innerText = '0';
+            document.getElementById('unit-to').innerText = '0';
+            document.getElementById('unit-sho').innerText = '0';
+            document.getElementById('unit-go').innerText = '0';
+
+            document.getElementById('raw-rice-weight').innerText = '0';
+            document.getElementById('cooked-rice-weight').innerText = '0';
+            document.getElementById('onigiri-count').innerText = '0';
+            document.getElementById('people-count').innerText = '0.0';
+        }
+
+        function addRecordToKenchicho() {
+            const buInput = parseFloat(document.getElementById('bu-input').value);
+            if (isNaN(buInput) || buInput <= 0) {
+                return;
+            }
+
+            const tan = buInput / 300;
+            const rate = gradeRates[currentGrade];
+            const koku = tan * rate;
+
+            const gradeNames = {
+                'joden': '上田',
+                'chuden': '中田',
+                'geden': '下田'
+            };
+
+            const newRecord = {
+                id: Date.now(),
+                number: records.length + 1,
+                bu: buInput,
+                tan: tan,
+                gradeName: gradeNames[currentGrade],
+                koku: koku
+            };
+
+            records.push(newRecord);
+            renderKenchicho();
+        }
+
+        function deleteRecord(id) {
+            records = records.filter(r => r.id !== id);
+            records.forEach((r, idx) => r.number = idx + 1);
+            renderKenchicho();
+        }
+
+        function clearKenchicho() {
+            if (records.length === 0) return;
+            records = [];
+            renderKenchicho();
+        }
+
+        function renderKenchicho() {
+            const tbody = document.getElementById('kenchicho-tbody');
+            
+            if (records.length === 0) {
+                tbody.innerHTML = `
+                    <tr id="empty-row">
+                        <td colspan="6" class="text-center py-6 text-gray-400 text-xs">
+                            まだ検地帳に記録がありません。「記帳する」ボタンを押して追加してね！
+                        </td>
+                    </tr>
+                `;
+                document.getElementById('total-village-koku').innerText = '0.00';
+                return;
+            }
+
+            let totalKoku = 0;
+            let html = '';
+
+            records.forEach(r => {
+                totalKoku += r.koku;
+                html += `
+                    <tr class="hover:bg-amber-50/80 transition">
+                        <td class="p-2.5 font-bold text-amber-900">第 ${r.number} 番田</td>
+                        <td class="p-2.5 font-bold">${r.bu.toLocaleString()} 歩</td>
+                        <td class="p-2.5 text-gray-700">${r.tan.toFixed(2)} 反</td>
+                        <td class="p-2.5">
+                            <span class="px-2 py-0.5 text-xs font-bold rounded ${r.gradeName === '上田' ? 'bg-amber-200 text-amber-900' : r.gradeName === '中田' ? 'bg-amber-100 text-amber-800' : 'bg-stone-200 text-stone-800'}">
+                                ${r.gradeName}
+                            </span>
+                        </td>
+                        <td class="p-2.5 font-extrabold text-amber-900 font-mincho text-right text-base">${r.koku.toFixed(2)} 石</td>
+                        <td class="p-2.5 text-center">
+                            <button onclick="deleteRecord(${r.id})" class="text-red-500 hover:text-red-700 p-1 text-xs">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+            document.getElementById('total-village-koku').innerText = totalKoku.toFixed(2);
+        }
+
+        function toggleKnowledgeModal() {
+            const modal = document.getElementById('knowledge-modal');
+            modal.classList.toggle('hidden');
+        }
+    </script>
+</body>
+</html>
